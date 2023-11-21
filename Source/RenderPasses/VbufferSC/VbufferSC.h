@@ -31,17 +31,17 @@
 
 using namespace Falcor;
 
-class VbufferSC : public RenderPass
+class VBufferSC : public RenderPass
 {
 public:
-    FALCOR_PLUGIN_CLASS(VbufferSC, "VbufferSC", "Insert pass description here.");
+    FALCOR_PLUGIN_CLASS(VBufferSC, "VBufferSC", "Insert pass description here.");
 
-    static ref<VbufferSC> create(ref<Device> pDevice, const Properties& props)
+    static ref<VBufferSC> create(ref<Device> pDevice, const Properties& props)
     {
-        return make_ref<VbufferSC>(pDevice, props);
+        return make_ref<VBufferSC>(pDevice, props);
     }
 
-    VbufferSC(ref<Device> pDevice, const Properties& props);
+    VBufferSC(ref<Device> pDevice, const Properties& props);
 
     virtual Properties getProperties() const override;
     virtual RenderPassReflection reflect(const CompileData& compileData) override;

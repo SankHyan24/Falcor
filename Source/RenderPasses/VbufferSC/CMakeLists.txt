@@ -1,8 +1,8 @@
-add_plugin(VbufferSC)
+add_plugin(VBufferSC)
 
-target_sources(VbufferSC PRIVATE
-    VbufferSC.cpp
-    VbufferSC.h
+target_sources(VBufferSC PRIVATE
+    VBufferSC.cpp
+    VBufferSC.h
 )
 
-target_source_group(VbufferSC "RenderPasses")
+target_source_group(VBufferSC "RenderPasses")

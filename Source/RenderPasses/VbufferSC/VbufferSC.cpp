@@ -25,21 +25,21 @@
  # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **************************************************************************/
-#include "VbufferSC.h"
+#include "VBufferSC.h"
 
 extern "C" FALCOR_API_EXPORT void registerPlugin(Falcor::PluginRegistry& registry)
 {
-    registry.registerClass<RenderPass, VbufferSC>();
+    registry.registerClass<RenderPass, VBufferSC>();
 }
 
-VbufferSC::VbufferSC(ref<Device> pDevice, const Properties& props) : RenderPass(pDevice) {}
+VBufferSC::VBufferSC(ref<Device> pDevice, const Properties& props) : RenderPass(pDevice) {}
 
-Properties VbufferSC::getProperties() const
+Properties VBufferSC::getProperties() const
 {
     return {};
 }
 
-RenderPassReflection VbufferSC::reflect(const CompileData& compileData)
+RenderPassReflection VBufferSC::reflect(const CompileData& compileData)
 {
     // Define the required resources here
     RenderPassReflection reflector;
@@ -48,10 +48,10 @@ RenderPassReflection VbufferSC::reflect(const CompileData& compileData)
     return reflector;
 }
 
-void VbufferSC::execute(RenderContext* pRenderContext, const RenderData& renderData)
+void VBufferSC::execute(RenderContext* pRenderContext, const RenderData& renderData)
 {
     // renderData holds the requested resources
     // auto& pTexture = renderData.getTexture("src");
 }
 
-void VbufferSC::renderUI(Gui::Widgets& widget) {}
+void VBufferSC::renderUI(Gui::Widgets& widget) {}
