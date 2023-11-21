@@ -30,14 +30,33 @@
 import Scene.Raytracing;
 import Scene.Intersection;
 import Scene.SDFs.SDFGridHitData;
-import VBufferRT;
+import VBufferSC;
 
-ConstantBuffer<VBufferRT> gVBufferRT;
+ConstantBuffer<VBufferSC> gVBufferSC;
 
 struct RayData
 {
     // TODO: Passing in an empty payload struct doesn't work. Declare a dummy variable so that the compiler doesn't remove the declaration.
-    int dummy;
+    float3 thp; ///< Current path throughput. This is updated at each path vertex.
+    bool terminated; ///< Set to true when path is terminated.
+    float3 origin; ///< Next path segment origin.
+    uint pathLength; ///<Length of the path
+    float3 direction; ///< Next path segment direction.
+    float distance;
+
+    SampleGenerator sg; ///< Per-ray state for the sample generator (up to 16B).
+
+    /** Create ray payload with default parameters.
+    */
+    __init(SampleGenerator sg){
+        this.thp = float3(1.0);
+        this.terminated = false;
+        this.origin = float3(0);
+        this.distance = 0.f;
+        this.direction = float3(0);
+        this.pathLength = 0;
+        this.sg = sg;
+    }
 };
 
 //
@@ -49,7 +68,7 @@ void miss(inout RayData rayData)
 {
     // Write invalid hit to output buffer.
     uint2 launchIndex = DispatchRaysIndex().xy;
-    gVBufferRT.writeMiss(launchIndex, WorldRayOrigin(), WorldRayDirection());
+    gVBufferSC.writeMiss(launchIndex, WorldRayOrigin(), WorldRayDirection());
 }
 
 //
@@ -59,7 +78,7 @@ void miss(inout RayData rayData)
 [shader("anyhit")]
 void anyHit(inout RayData rayData, BuiltInTriangleIntersectionAttributes attribs)
 {
-    if (VBufferRT::kUseAlphaTest)
+    if (VBufferSC::kUseAlphaTest)
     {
         // Alpha test for non-opaque geometry.
         GeometryInstanceID instanceID = getGeometryInstanceID();
@@ -81,7 +100,7 @@ void closestHit(inout RayData rayData, BuiltInTriangleIntersectionAttributes att
 
     // Write hit info to output buffer.
     uint2 launchIndex = DispatchRaysIndex().xy;
-    gVBufferRT.writeHit(launchIndex, WorldRayOrigin(), WorldRayDirection(), HitInfo(triangleHit));
+    gVBufferSC.writeHit(launchIndex, WorldRayOrigin(), WorldRayDirection(), HitInfo(triangleHit));
 }
 
 //
@@ -112,7 +131,7 @@ void displacedTriangleMeshClosestHit(inout RayData rayData, DisplacedTriangleMes
 
     // Write hit info to output buffer.
     uint2 launchIndex = DispatchRaysIndex().xy;
-    gVBufferRT.writeHit(launchIndex, WorldRayOrigin(), WorldRayDirection(), HitInfo(displacedTriangleHit));
+    gVBufferSC.writeHit(launchIndex, WorldRayOrigin(), WorldRayDirection(), HitInfo(displacedTriangleHit));
 }
 
 //
@@ -142,7 +161,7 @@ void curveClosestHit(inout RayData rayData, CurveIntersector::Attribs attribs)
 
     // Write hit info to output buffer.
     uint2 launchIndex = DispatchRaysIndex().xy;
-    gVBufferRT.writeHit(launchIndex, WorldRayOrigin(), WorldRayDirection(), HitInfo(curveHit));
+    gVBufferSC.writeHit(launchIndex, WorldRayOrigin(), WorldRayDirection(), HitInfo(curveHit));
 }
 
 
@@ -172,7 +191,7 @@ void sdfGridClosestHit(inout RayData rayData, SDFGridHitData sdfGridHitData)
 
     // Write hit info to output buffer.
     uint2 launchIndex = DispatchRaysIndex().xy;
-    gVBufferRT.writeHit(launchIndex, WorldRayOrigin(), WorldRayDirection(), HitInfo(sdfGridHit));
+    gVBufferSC.writeHit(launchIndex, WorldRayOrigin(), WorldRayDirection(), HitInfo(sdfGridHit));
 }
 
 //
@@ -185,23 +204,41 @@ void rayGen()
     uint2 launchIndex = DispatchRaysIndex().xy;
 
     GpuTimer timer;
-    gVBufferRT.beginTime(timer);
+    gVBufferSC.beginTime(timer);
 
     // Trace ray
-    const Ray ray = gVBufferRT.generateRay(launchIndex);
+    const Ray camRay = gVBufferSC.generateRay(launchIndex);
+    Ray ray = camRay;
     RayData rayData;
-    TraceRay(
-        gScene.rtAccel,
-        VBufferRT::kRayFlags,
-        0xff /* instanceInclusionMask */,
-        0 /* hitIdx */,
-        rayTypeCount,
-        0 /* missIdx */,
-        ray.toRayDesc(),
-        rayData
-    );
+    for (uint i = 0; i < gMaxRecursion; i++) {
+        TraceRay(
+            gScene.rtAccel,
+            VBufferSC::kRayFlags,
+            0xff /* instanceInclusionMask */,
+            0 /* hitIdx */,
+            rayTypeCount,
+            0 /* missIdx */,
+            ray.toRayDesc(),
+            rayData
+        );
 
-    gVBufferRT.writeAux(launchIndex, ray);
+        // break;
+        if (rayData.terminated) {
+            if(rayData.distance<0.01f) {
+                gVBufferSC.writeMiss(launchIndex, WorldRayOrigin(), WorldRayDirection());
+            }
+            break;
+        }
+        // update ray for next iteration
+        ray.origin = rayData.origin;
+        ray.dir = rayData.direction;
+        if(i==0) {
+            ray.tMin = 0.0;//Change tMin for transparent hits
+        }
+    }
 
-    gVBufferRT.endTime(launchIndex, timer);
+
+    gVBufferSC.writeAux(launchIndex, camRay);
+
+    gVBufferSC.endTime(launchIndex, timer);
 }

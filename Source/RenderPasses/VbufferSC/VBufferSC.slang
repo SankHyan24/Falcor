@@ -35,6 +35,10 @@ RWTexture2D<PackedHitInfo> gVBuffer;
 RWTexture2D<float> gDepth;
 RWTexture2D<float2> gMotionVector;
 RWTexture2D<float4> gViewW;
+
+RWTexture2D<float4> gThp;      //
+RWTexture2D<float4> gEmissive; //
+
 RWTexture2D<uint> gTime;
 RWTexture2D<float> gMask;
 
@@ -43,9 +47,12 @@ RWTexture2D<float> gMask;
 #if !defined(COMPUTE_DEPTH_OF_FIELD) || !defined(USE_ALPHA_TEST) || !defined(RAY_FLAGS)
 #error "Not all defines are set!"
 #endif
+// tmp take it here
+uint gMaxRecursion = 10;
 
-struct VBufferRT
+struct VBufferSC
 {
+    // From the UI settings
     static const bool kComputeDepthOfField = COMPUTE_DEPTH_OF_FIELD;
     static const bool kUseAlphaTest = USE_ALPHA_TEST;
     static const uint kRayFlags = RAY_FLAGS;
@@ -53,6 +60,7 @@ struct VBufferRT
     uint2 frameDim;
     uint frameCount;
 
+    // Generate a Ray from the pixel coordinate and the camera
     Ray generateRay(uint2 pixel)
     {
         if (kComputeDepthOfField)
@@ -66,7 +74,8 @@ struct VBufferRT
         }
     }
 
-    void writeHit(uint2 pixel, float3 rayOrigin, float3 rayDir, const HitInfo hit)
+    void writeHit(uint2 pixel, float3 rayOrigin, float3 rayDir,  const HitInfo hit)
+    // void writeHit(uint2 pixel, float3 rayOrigin, float3 rayDir, float3 thp, float3 emissive, const HitInfo hit)
     {
         gVBuffer[pixel] = hit.getData();
 
