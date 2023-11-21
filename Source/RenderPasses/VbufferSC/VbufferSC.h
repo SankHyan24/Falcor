@@ -28,18 +28,32 @@
 #pragma once
 #include "Falcor.h"
 #include "RenderGraph/RenderPass.h"
+#include "RenderGraph/RenderPassHelpers.h"
 
 using namespace Falcor;
 
 class VBufferSC : public RenderPass
 {
 public:
-    FALCOR_PLUGIN_CLASS(VBufferSC, "VBufferSC", "Insert pass description here.");
-
-    static ref<VBufferSC> create(ref<Device> pDevice, const Properties& props)
+    FALCOR_PLUGIN_CLASS(VBufferSC, "VBufferSC", "VBuffer for SC Photon Mapping");
+    enum class SamplePattern : uint32_t
     {
-        return make_ref<VBufferSC>(pDevice, props);
-    }
+        Center,
+        DirectX,
+        Halton,
+        Stratified,
+    };
+    FALCOR_ENUM_INFO(
+        SamplePattern,
+        {
+            {SamplePattern::Center, "Center"},
+            {SamplePattern::DirectX, "DirectX"},
+            {SamplePattern::Halton, "Halton"},
+            {SamplePattern::Stratified, "Stratified"},
+        }
+    );
+
+    static ref<VBufferSC> create(ref<Device> pDevice, const Properties& props) { return make_ref<VBufferSC>(pDevice, props); }
 
     VBufferSC(ref<Device> pDevice, const Properties& props);
 
@@ -48,9 +62,81 @@ public:
     virtual void compile(RenderContext* pRenderContext, const CompileData& compileData) override {}
     virtual void execute(RenderContext* pRenderContext, const RenderData& renderData) override;
     virtual void renderUI(Gui::Widgets& widget) override;
-    virtual void setScene(RenderContext* pRenderContext, const ref<Scene>& pScene) override {}
+    virtual void setScene(RenderContext* pRenderContext, const ref<Scene>& pScene);
     virtual bool onMouseEvent(const MouseEvent& mouseEvent) override { return false; }
     virtual bool onKeyEvent(const KeyboardEvent& keyEvent) override { return false; }
 
 private:
+    void parseProperties(const Properties& props);
+
+    void executeRaytrace(RenderContext* pRenderContext, const RenderData& renderData);
+    void executeCompute(RenderContext* pRenderContext, const RenderData& renderData);
+
+    DefineList getShaderDefines(const RenderData& renderData) const;
+    void bindShaderData(const ShaderVar& var, const RenderData& renderData);
+    void recreatePrograms();
+
+    // From GBuffer
+    virtual void setCullMode(RasterizerState::CullMode mode) { mCullMode = mode; }
+    void updateFrameDim(const uint2 frameDim);
+    void updateSamplePattern();
+    ref<Texture> getOutput(const RenderData& renderData, const std::string& name) const;
+
+    // From GBuffer
+    ref<Scene> mpScene;
+    /// Sample generator for camera jitter.
+    ref<CPUSampleGenerator> mpSampleGenerator_base;
+
+    /// Frames rendered since last change of scene. This is used as random seed.
+    uint32_t mFrameCount = 0;
+    /// Current frame dimension in pixels. Note this may be different from the window size.
+    uint2 mFrameDim = {};
+    float2 mInvFrameDim = {};
+    ResourceFormat mVBufferFormat = HitInfo::kDefaultFormat;
+
+    // UI variables
+
+    /// Selected output size.
+    RenderPassHelpers::IOSize mOutputSizeSelection = RenderPassHelpers::IOSize::Default;
+    /// Output size in pixels when 'Fixed' size is selected.
+    uint2 mFixedOutputSize = {512, 512};
+    /// Which camera jitter sample pattern to use.
+    SamplePattern mSamplePattern = SamplePattern::Center;
+    /// Sample count for camera jitter.
+    uint32_t mSampleCount = 16;
+    /// Enable alpha test.
+    bool mUseAlphaTest = true;
+    /// Adjust shading normals.
+    bool mAdjustShadingNormals = true;
+    /// Force cull mode for all geometry, otherwise set it based on the scene.
+    bool mForceCullMode = false;
+    /// Cull mode to use for when mForceCullMode is true.
+    RasterizerState::CullMode mCullMode = RasterizerState::CullMode::Back;
+
+    /// Indicates whether any options that affect the output have changed since last frame.
+    bool mOptionsChanged = false;
+
+    // From VBufferRT
+
+    // Internal state
+
+    /// Flag indicating if depth-of-field is computed for the current frame.
+    bool mComputeDOF = false;
+    ref<SampleGenerator> mpSampleGenerator;
+
+    // UI variables
+
+    bool mUseTraceRayInline = false;
+    /// Option for enabling depth-of-field when camera's aperture radius is nonzero.
+    bool mUseDOF = true;
+
+    struct
+    {
+        ref<Program> pProgram;
+        ref<RtProgramVars> pVars;
+    } mRaytrace;
+
+    ref<ComputePass> mpComputePass;
 };
+
+FALCOR_ENUM_REGISTER(VBufferSC::SamplePattern);

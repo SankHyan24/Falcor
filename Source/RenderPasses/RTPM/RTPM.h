@@ -25,36 +25,32 @@
  # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **************************************************************************/
-import Scene.RaytracingInline;
-import VBufferSC;
+#pragma once
+#include "Falcor.h"
+#include "RenderGraph/RenderPass.h"
 
-ConstantBuffer<VBufferSC> gVBufferSC;
+using namespace Falcor;
 
-[numthreads(16, 16, 1)]
-void main(uint3 dispatchThreadId: SV_DispatchThreadID)
+class RTPM : public RenderPass
 {
-    uint2 pixel = dispatchThreadId.xy;
-    if (any(pixel >= gVBufferSC.frameDim))
-        return;
+public:
+    FALCOR_PLUGIN_CLASS(RTPM, "RTPM", "Insert pass description here.");
 
-    GpuTimer timer;
-    gVBufferSC.beginTime(timer);
-
-    const Ray ray = gVBufferSC.generateRay(pixel);
-
-    SceneRayQuery<VBufferSC::kUseAlphaTest> sceneRayQuery;
-    HitInfo hit;
-    float hitT;
-    if (sceneRayQuery.traceRay(ray, hit, hitT, VBufferSC::kRayFlags, 0xff))
+    static ref<RTPM> create(ref<Device> pDevice, const Properties& props)
     {
-        gVBufferSC.writeHit(pixel, ray.origin, ray.dir, hit);
-    }
-    else
-    {
-        gVBufferSC.writeMiss(pixel, ray.origin, ray.dir);
+        return make_ref<RTPM>(pDevice, props);
     }
 
-    gVBufferSC.writeAux(pixel, ray);
+    RTPM(ref<Device> pDevice, const Properties& props);
 
-    gVBufferSC.endTime(pixel, timer);
-}
+    virtual Properties getProperties() const override;
+    virtual RenderPassReflection reflect(const CompileData& compileData) override;
+    virtual void compile(RenderContext* pRenderContext, const CompileData& compileData) override {}
+    virtual void execute(RenderContext* pRenderContext, const RenderData& renderData) override;
+    virtual void renderUI(Gui::Widgets& widget) override;
+    virtual void setScene(RenderContext* pRenderContext, const ref<Scene>& pScene) override {}
+    virtual bool onMouseEvent(const MouseEvent& mouseEvent) override { return false; }
+    virtual bool onKeyEvent(const KeyboardEvent& keyEvent) override { return false; }
+
+private:
+};

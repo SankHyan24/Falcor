@@ -25,36 +25,33 @@
  # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **************************************************************************/
-import Scene.RaytracingInline;
-import VBufferSC;
+#include "RTPM.h"
 
-ConstantBuffer<VBufferSC> gVBufferSC;
-
-[numthreads(16, 16, 1)]
-void main(uint3 dispatchThreadId: SV_DispatchThreadID)
+extern "C" FALCOR_API_EXPORT void registerPlugin(Falcor::PluginRegistry& registry)
 {
-    uint2 pixel = dispatchThreadId.xy;
-    if (any(pixel >= gVBufferSC.frameDim))
-        return;
-
-    GpuTimer timer;
-    gVBufferSC.beginTime(timer);
-
-    const Ray ray = gVBufferSC.generateRay(pixel);
-
-    SceneRayQuery<VBufferSC::kUseAlphaTest> sceneRayQuery;
-    HitInfo hit;
-    float hitT;
-    if (sceneRayQuery.traceRay(ray, hit, hitT, VBufferSC::kRayFlags, 0xff))
-    {
-        gVBufferSC.writeHit(pixel, ray.origin, ray.dir, hit);
-    }
-    else
-    {
-        gVBufferSC.writeMiss(pixel, ray.origin, ray.dir);
-    }
-
-    gVBufferSC.writeAux(pixel, ray);
-
-    gVBufferSC.endTime(pixel, timer);
+    registry.registerClass<RenderPass, RTPM>();
 }
+
+RTPM::RTPM(ref<Device> pDevice, const Properties& props) : RenderPass(pDevice) {}
+
+Properties RTPM::getProperties() const
+{
+    return {};
+}
+
+RenderPassReflection RTPM::reflect(const CompileData& compileData)
+{
+    // Define the required resources here
+    RenderPassReflection reflector;
+    // reflector.addOutput("dst");
+    // reflector.addInput("src");
+    return reflector;
+}
+
+void RTPM::execute(RenderContext* pRenderContext, const RenderData& renderData)
+{
+    // renderData holds the requested resources
+    // auto& pTexture = renderData.getTexture("src");
+}
+
+void RTPM::renderUI(Gui::Widgets& widget) {}
