@@ -64,8 +64,8 @@ const char kUseDOF[] = "useDOF";
 
 // Ray tracing settings that affect the traversal stack size. Set as small as possible.
 // TODO: The shader doesn't need a payload, set this to zero if it's possible to pass a null payload to TraceRay()
-const uint32_t kMaxPayloadSizeBytes = 4;
-const uint32_t kMaxRecursionDepth = 1;
+const uint32_t kMaxPayloadSizeBytes = 64u;
+const uint32_t kMaxRecursionDepth = 2u;
 
 const std::string kVBufferName = "vbuffer";
 const std::string kVBufferDesc = "V-buffer in packed format (indices + barycentrics)";
