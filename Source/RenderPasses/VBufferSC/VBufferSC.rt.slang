@@ -182,19 +182,19 @@ void handleHit(const HitInfo hit, inout RayData rayData)
     BSDFSample bsdfSample;
     bool canGenerateNewRay = generateNewRay(sd, mi, isCurveHit, rayOrigin, bsdfSample, rayData);
     // ???????????????????? 总是返回false
-    // if (!canGenerateNewRay)
-    // {
-    //     // gVBufferSC.writeShit(launchIndex, uint3(0, 0, 255));
-    //     rayData.terminated = true;
-    //     // rayData.distance = -1.f;
-    //     gVBufferSC.writeMiss(launchIndex, WorldRayOrigin(), WorldRayDirection());
-    //     return;
-    // }
+    if (!canGenerateNewRay)
+    {
+        // gVBufferSC.writeShit(launchIndex, uint3(0, 0, 255));
+        rayData.terminated = true;
+        // rayData.distance = -1.f;
+        gVBufferSC.writeMiss(launchIndex, WorldRayOrigin(), WorldRayDirection());
+        return;
+    }
 
     // if diffuse, if so, write hit and terminate
     BSDFProperties bsdfProperties = mi.getProperties(sd);
     // bool ifDiffuse = bsdfProperties.roughness > gSpecularRougnessCutoff;
-    bool ifDiffuse = bsdfProperties.roughness > 0.9f;
+    bool ifDiffuse = bsdfProperties.roughness > 0.5f;
     if ((bsdfSample.isLobe(LobeType::DiffuseReflection) || (bsdfSample.isLobe(LobeType::Reflection) && ifDiffuse))) // sc: 没看明白
     {
         gVBufferSC.writeHit(launchIndex, WorldRayOrigin(), WorldRayDirection(), throughPut, emissiveRadiance, hit, rayData.distance);
@@ -354,7 +354,8 @@ void rayGen()
     RayData rayData = RayData(SampleGenerator(launchIndex, gVBufferSC.frameCount));
     const Ray camRay = gVBufferSC.generateRay(launchIndex, rayData.sg);
     Ray ray = camRay;
-    // RayData rayData ;
+    rayData.origin = ray.origin;
+    rayData.direction = ray.dir;
     uint gMaxRecursion = 15;
     for (uint i = 0; i < gMaxRecursion; i++)
     {
