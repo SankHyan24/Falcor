@@ -51,6 +51,7 @@ const char kDisableAlphaTest[] = "disableAlphaTest"; ///< Deprecated for "useAlp
 const char kAdjustShadingNormals[] = "adjustShadingNormals";
 const char kForceCullMode[] = "forceCullMode";
 const char kCullMode[] = "cull";
+
 } // namespace
 // From VBufferRT
 namespace
@@ -84,6 +85,13 @@ const ChannelList kVBufferExtraChannels = {
 };
 }; // namespace
 
+// My defines
+namespace
+{
+const char kSpecRoughCutoff[] = "specRoughCutoff";
+const char kRecursionDepth[] = "recursionDepth";
+}; // namespace
+
 VBufferSC::VBufferSC(ref<Device> pDevice, const Properties& props) : RenderPass(pDevice)
 {
     if (!mpDevice->isShaderModelSupported(ShaderModel::SM6_5))
@@ -112,6 +120,8 @@ Properties VBufferSC::getProperties() const
     props[kCullMode] = mCullMode;
     props[kUseTraceRayInline] = mUseTraceRayInline;
     props[kUseDOF] = mUseDOF;
+    props[kSpecRoughCutoff] = mSpecRoughCutoff;
+    props[kRecursionDepth] = mRecursionDepth;
 
     return props;
 }
@@ -253,6 +263,10 @@ void VBufferSC::renderUI(Gui::Widgets& widget)
         "Disable it to force the use of a pinhole camera.",
         true
     );
+    if (widget.var("Specular Roughness Cutoff", mSpecRoughCutoff, 0.0f, 1.0f))
+        requestRecompile();
+    if (widget.var("path trace max depth", mRecursionDepth, 1u, 30u))
+        requestRecompile();
 }
 
 void VBufferSC::setScene(RenderContext* pRenderContext, const ref<Scene>& pScene)
@@ -295,6 +309,10 @@ void VBufferSC::parseProperties(const Properties& props)
             mForceCullMode = value;
         else if (key == kCullMode)
             mCullMode = value;
+        else if (key == kSpecRoughCutoff)
+            mSpecRoughCutoff = value;
+        else if (key == kRecursionDepth)
+            mRecursionDepth = value;
         // TODO: Check for unparsed fields, including those parsed in derived classes.
     }
 
@@ -440,6 +458,8 @@ void VBufferSC::bindShaderData(const ShaderVar& var, const RenderData& renderDat
 {
     var["gVBufferSC"]["frameDim"] = mFrameDim;
     var["gVBufferSC"]["frameCount"] = mFrameCount;
+    var["CB"]["gSpecularRougnessCutoff"] = mSpecRoughCutoff;
+    var["CB"]["gMaxRecursion"] = mRecursionDepth;
 
     // Bind resources.
     var["gVBuffer"] = getOutput(renderData, kVBufferName);

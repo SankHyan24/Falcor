@@ -32,6 +32,17 @@
 #include "Utils/Sampling/SampleGenerator.h"
 
 using namespace Falcor;
+/***
+ * Create a new widget item (variables) u need to do these things:
+ * 1. first, write the variable in shader (gVar)
+ * Then finish the C++ program part
+ * 2. create an anonymous namespace variable (about the string description, kVar)
+ * 3. Create the variable itself in the Class (mVar)
+ * 4. getprops and parseprops, bind then
+ * 5. Add the widget item in RenderUI Function
+ * Then bind the shader and C++ program
+ * 6. bindshaderdata, bind C++ variable with shader bufname and varname
+ */
 
 class VBufferSC : public RenderPass
 {
@@ -138,6 +149,10 @@ private:
     } mRaytrace;
 
     ref<ComputePass> mpComputePass;
+
+    // My defines Configuration
+    float mSpecRoughCutoff = 0.5f; ///< Cutoff for when all hits are counted diffuse.
+    uint mRecursionDepth = 10;
 };
 
 FALCOR_ENUM_REGISTER(VBufferSC::SamplePattern);

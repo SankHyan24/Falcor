@@ -41,11 +41,12 @@ ConstantBuffer<VBufferSC> gVBufferSC;
 
 cbuffer CB
 {
-    float gSpecularRougnessCutoff; // cutoff for when a hit counts as diffuse
-    bool gAdjustShadingNormals;    // Adjusts the shading normals if activated
+    // bool gAdjustShadingNormals;    // Adjusts the shading normals if activated
     bool gUseAlphaTest;            // uses alpha test if activated
-
     bool gUseRandomPixelPosCamera; // Uses a randomly generated pixel offset for camera direction sampeling instead of fixed jitter
+    //
+    float gSpecularRougnessCutoff; // cutoff for when a hit counts as diffuse
+    uint gMaxRecursion;            // Max Recursion of ray trace path
 }
 
 struct RayData
@@ -194,7 +195,7 @@ void handleHit(const HitInfo hit, inout RayData rayData)
     // if diffuse, if so, write hit and terminate
     BSDFProperties bsdfProperties = mi.getProperties(sd);
     // bool ifDiffuse = bsdfProperties.roughness > gSpecularRougnessCutoff;
-    bool ifDiffuse = bsdfProperties.roughness > 0.5f;
+    bool ifDiffuse = bsdfProperties.roughness > gSpecularRougnessCutoff;
     if ((bsdfSample.isLobe(LobeType::DiffuseReflection) || (bsdfSample.isLobe(LobeType::Reflection) && ifDiffuse))) // sc: 没看明白
     {
         gVBufferSC.writeHit(launchIndex, WorldRayOrigin(), WorldRayDirection(), throughPut, emissiveRadiance, hit, rayData.distance);
@@ -356,7 +357,6 @@ void rayGen()
     Ray ray = camRay;
     rayData.origin = ray.origin;
     rayData.direction = ray.dir;
-    uint gMaxRecursion = 15;
     for (uint i = 0; i < gMaxRecursion; i++)
     {
         TraceRay(
