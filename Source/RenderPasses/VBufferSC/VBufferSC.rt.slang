@@ -41,7 +41,7 @@ ConstantBuffer<VBufferSC> gVBufferSC;
 
 cbuffer CB
 {
-    // bool gAdjustShadingNormals;    // Adjusts the shading normals if activated
+    bool gAdjustShadingNormals;    // Adjusts the shading normals if activated
     bool gUseAlphaTest;            // uses alpha test if activated
     bool gUseRandomPixelPosCamera; // Uses a randomly generated pixel offset for camera direction sampeling instead of fixed jitter
     //
@@ -157,6 +157,7 @@ void handleHit(const HitInfo hit, inout RayData rayData)
 
     // load shading data
     ShadingData sd = loadShadingData(hit, rayData.origin, rayData.direction, lod);
+    // not implement adjust shading normal yet
 
     // create material instance
     IMaterialInstance mi = gScene.materials.getMaterialInstance(sd, lod);
